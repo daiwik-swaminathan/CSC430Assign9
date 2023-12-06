@@ -19,13 +19,13 @@
 (struct AppC ([fun : ExprC] [args : (Listof ExprC)]) #:transparent)
 
 ;; Global environment with our primitive operators 
-(define global-env (list (Binding '+ (PrimopV '+ 2))
-                              (Binding '- (PrimopV '- 2))
-                              (Binding '* (PrimopV '* 2))
-                              (Binding '/ (PrimopV '/ 2))
-                              (Binding '<= (PrimopV '<= 2))
-                              (Binding 'equal? (PrimopV 'equal? 2))
-                              (Binding 'error (PrimopV 'error 1))
+(define global-env (list (Binding '+ (PrimopV '+))
+                              (Binding '- (PrimopV '-))
+                              (Binding '* (PrimopV '*))
+                              (Binding '/ (PrimopV '/))
+                              (Binding '<= (PrimopV '<=))
+                              (Binding 'equal? (PrimopV 'equal?))
+                              (Binding 'error (PrimopV 'error))
                               (Binding 'true (BoolV #t))
                               (Binding 'false (BoolV #f))))
 
@@ -84,14 +84,116 @@
 
                 ;; Case 3: None of the above, so error out
                 [other (error 'interp "PAIG: not a callable function")]))]))
+
+(define (lookup [for : Symbol] [env : (Listof Binding)]) : Value
+  (match env
+    ['() (error 'lookup "PAIG: name not found")]
+    [(cons f r) (cond
+                  [(equal? for (Binding-name f)) (Binding-val f)]
+                  [else (lookup for r)])]))
 *#
 
-# Define a simple function
-myFunction = { parameter1, parameter2 |
-  # Function body
-  result = parameter1 + parameter2
-  p result  # Print the result
+# Imports
+squish import :assert :assertions
+
+# plusPrimop
+plusPrimop = new
+plusPrimop.type = "PrimopV"
+plusPrimop.name = "+"
+
+# minusPrimop
+minusPrimop = new
+minusPrimop.type = "PrimopV"
+minusPrimop.name = "-"
+
+# multiplyPrimop
+multiplyPrimop = new
+multiplyPrimop.type = "PrimopV"
+multiplyPrimop.name = "*"
+
+# dividePrimop
+dividePrimop = new
+dividePrimop.type = "PrimopV"
+dividePrimop.name = "/"
+
+# lessThanOrEqualPrimop
+lessThanOrEqualPrimop = new
+lessThanOrEqualPrimop.type = "PrimopV"
+lessThanOrEqualPrimop.name = "<="
+
+# equalPrimop
+equalPrimop = new
+equalPrimop.type = "PrimopV"
+equalPrimop.name = "equal?"
+
+# errorPrimop
+errorPrimop = new
+errorPrimop.type = "PrimopV"
+errorPrimop.name = "error"
+
+# trueBool
+trueBool = new
+trueBool.type = "BoolV"
+trueBool.value = true
+
+# falseBool
+falseBool = new
+falseBool.type = "BoolV"
+falseBool.value = false
+
+# Create the global environment hash
+globalEnv = hash.new
+
+# Populate the hash with operator functions
+# This mapping is pretty much a Binding
+globalEnv["+"] = plusPrimop
+globalEnv["-"] = minusPrimop
+globalEnv["*"] = multiplyPrimop
+globalEnv["/"] = dividePrimop
+globalEnv["<="] = lessThanOrEqualPrimop
+globalEnv["equal?"] = equalPrimop
+globalEnv["error"] = errorPrimop
+globalEnv["true"] = equalPrimop
+globalEnv["false"] = errorPrimop
+
+# Given an expression and an environment containing Bindings,
+# return a Value produced by interpreting the given expression
+interp = { expr, env |
+
+    when { expr.type == "NumC"  } { returnValue = new
+                                    returnValue.type = "NumV"
+                                    returnValue.value = expr.value
+                                    returnValue }
+         { expr.type == "IdC"  } { lookup(expr.value, env) }
+         { expr.type == "IfC"  } { expr1Interp = interp(expr.expr1)
+                                   when { expr1Interp.type == "BoolV" } { true? expr1BoolV.value interp(expr.expr2) interp(expr.expr3) }
+                                        { true } { null }
+                                 }     
 }
 
-# Call the function with arguments
-myFunction 3, 5
+# Given a name, returns it's corresponding value from the environment.
+# Returns null if the name cannot be found
+lookup = { name, env |
+    env[name]
+}
+
+# Test Cases for Interp
+
+# NumC Test Case
+testExpr = new
+testExpr.type = "NumC"
+testExpr.value = 1
+
+expected = new
+expected.type = "NumV"
+expected.value = 1
+actual = interp(testExpr, globalEnv)
+
+assert_equal(expected.type, actual.type)
+assert_equal(expected.value, actual.value)
+
+# Test Cases for lookup
+
+assert_equal(lookup("+", globalEnv), plusPrimop)
+assert_null(lookup("$", globalEnv))
+
