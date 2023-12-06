@@ -1,1 +1,97 @@
-p "Brat"
+#*  
+  Assignment 5 AST and Interp
+
+  ;; PAIG5 abstract syntax definitions
+(define-type ExprC (U NumC IdC AppC IfC BlamC StringC))
+(define-type Value (U NumV BoolV StringV CloV PrimopV))
+(struct BlamC ([params : (Listof Symbol)] [body : ExprC]) #:transparent)
+(struct IfC ([expr1 : ExprC] [expr2 : ExprC] [exp3 : ExprC]) #:transparent)
+(struct NumC ([n : Real]) #:transparent)
+(struct StringC ([n : String]) #:transparent)
+(struct IdC ([s : Symbol]) #:transparent)
+;; Value definitions
+(struct Binding ([name : Symbol] [val : Value]) #:transparent)
+(struct NumV ([val : Real]) #:transparent)
+(struct BoolV ([b : Boolean]) #:transparent)
+(struct StringV ([s : String]) #:transparent)
+(struct CloV ([args : (Listof Symbol)] [body : ExprC] [env : (Listof Binding)]) #:transparent)
+(struct PrimopV ([operator-name : Symbol] [num-args : Real]) #:transparent)
+(struct AppC ([fun : ExprC] [args : (Listof ExprC)]) #:transparent)
+
+;; Global environment with our primitive operators 
+(define global-env (list (Binding '+ (PrimopV '+ 2))
+                              (Binding '- (PrimopV '- 2))
+                              (Binding '* (PrimopV '* 2))
+                              (Binding '/ (PrimopV '/ 2))
+                              (Binding '<= (PrimopV '<= 2))
+                              (Binding 'equal? (PrimopV 'equal? 2))
+                              (Binding 'error (PrimopV 'error 1))
+                              (Binding 'true (BoolV #t))
+                              (Binding 'false (BoolV #f))))
+
+;; Given an expression and an environment containing Bindings,
+;; return a Value produced by interpreting the given expression
+(define (interp [expr : ExprC] [env : (Listof Binding)]) : Value
+  (match expr
+
+    ;; A number
+    [(NumC n) (NumV n)]
+
+    ;; A string
+    [(StringC n) (StringV n)]
+
+    ;; An identifier (do lookup)
+    ;; This would handle when we see primitive function names and boolean literals
+    [(IdC n) (lookup n env)]
+
+    ;; If statement
+    ;; Note that the expression being evaluated must contain either the literal boolean true or false
+    [(IfC expr1 expr2 expr3) (cond
+                               [(equal? (interp expr1 env) (BoolV #t) ) (interp expr2 env)]
+                               [(equal? (interp expr1 env) (BoolV #f) ) (interp expr3 env)]
+                               [else (error 'interp "PAIG: expression did not contain literal boolean")])]
+
+    ;; A function (cast nums (Listof Real))
+    [(BlamC (list (? valid-symbol? args) ...) body) (CloV (cast args (Listof Symbol)) body env)]
+
+    ;; A function application
+    [(AppC fun fun-args) (local ([define fun-something (interp fun env)])
+              (match fun-something
+
+                ;; Case 1: A user defined function
+                [(CloV clo-args clo-body clo-env) (cond
+                [(equal? (length fun-args) (length clo-args)) (interp clo-body
+
+                      ;; Extend the environment
+                      (local ([define new-bindings (map (lambda ([name : Symbol] [value : Value])
+                                                          (Binding name value))  
+                                                clo-args
+                                                (map (lambda ([arg : ExprC]) (interp arg env)) fun-args) )])
+                        
+                        ;; Make sure the new bindings take precedence in the new environment
+                        (append new-bindings (CloV-env fun-something))))]
+
+                ;; Wrong number of arguments, so error out
+                [else (error 'interp "PAIG: incorrect number of arguments")])]
+
+                ;; Case 2: Built-in primitive operator function
+                [(PrimopV name num-args)
+                 (cond
+                                           [(equal? (length fun-args) num-args)
+                                            (call-primitive-helper name (map (lambda ([arg : ExprC])
+                                                                               (interp arg env)) fun-args))]
+                                           [else (error 'interp "PAIG: incorrect number of arguments")])]
+
+                ;; Case 3: None of the above, so error out
+                [other (error 'interp "PAIG: not a callable function")]))]))
+*#
+
+# Define a simple function
+myFunction = { parameter1, parameter2 |
+  # Function body
+  result = parameter1 + parameter2
+  p result  # Print the result
+}
+
+# Call the function with arguments
+myFunction 3, 5
