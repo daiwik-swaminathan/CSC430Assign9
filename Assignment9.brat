@@ -91,6 +91,40 @@
     [(cons f r) (cond
                   [(equal? for (Binding-name f)) (Binding-val f)]
                   [else (lookup for r)])]))
+
+(define (call-primitive-helper [name : Symbol] [args : (Listof Value)]) : Value
+  (match name
+    ['+ (match args
+          [(list (? NumV?) (? NumV?)) (NumV (+ (NumV-val (first args)) (NumV-val (second args))))]
+          [else (error 'call-primitive-helper "PAIG: addition requires two reals as arguments")])]
+    ['- (match args
+          [(list (? NumV?) (? NumV?)) (NumV (- (NumV-val (first args)) (NumV-val (second args))))]
+          [else (error 'call-primitive-helper "PAIG: subtraction requires two reals as arguments")])]
+    ['* (match args
+          [(list (? NumV?) (? NumV?)) (NumV (* (NumV-val (first args)) (NumV-val (second args))))]
+          [else (error 'call-primitive-helper "PAIG: multiplication requires two reals as arguments")])]
+    ['/ (match args
+          [(list (? NumV?) (? NumV?)) (cond
+                                         [(equal? (second args) (NumV 0)) (error 'interp "PAIG: division by 0")]
+                                         [else (NumV (/ (NumV-val (first args)) (NumV-val (second args))))])]
+          [else (error 'call-primitive-helper "PAIG: division requires two reals as arguments")])]
+    ['<= (match args
+          [(list (? NumV?) (? NumV?)) (BoolV (<= (NumV-val (first args)) (NumV-val (second args))))]
+          [else (error 'call-primitive-helper "PAIG: less than or equal to requires two reals as arguments")])]
+    ['true (BoolV #t)]
+    ['false (BoolV #f)]
+    ['equal? (match args
+          [(list (? NumV?) (? NumV?)) (BoolV (equal? (NumV-val (first args)) (NumV-val (second args))))]
+          [(list (? BoolV?) (? BoolV?)) (BoolV (equal? (BoolV-b (first args)) (BoolV-b (second args))))]
+          [(list (? StringV?) (? StringV?)) (BoolV (equal? (StringV-s (first args)) (StringV-s (second args))))]
+          [(list a b) (BoolV #f)]
+          [else (error 'call-primitive-helper
+                       "PAIG: equal? requires two arguments where neither value is a closure
+                        or a primitive operator")])]
+    ['error
+     (match args
+       [(list v) (error 'call-primitive-helper "PAIG: user-error ~v" (serialize v))]
+       [_ (error 'call-primitive-helper "PAIG: error takes 1 argument")])]))
 *#
 
 # Imports
