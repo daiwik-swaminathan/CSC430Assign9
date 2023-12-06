@@ -187,8 +187,14 @@ globalEnv["/"] = dividePrimop
 globalEnv["<="] = lessThanOrEqualPrimop
 globalEnv["equal?"] = equalPrimop
 globalEnv["error"] = errorPrimop
-globalEnv["true"] = equalPrimop
-globalEnv["false"] = errorPrimop
+globalEnv["true"] = trueBool
+globalEnv["false"] = falseBool
+
+# Given a name, returns it's corresponding value from the environment.
+# Returns null if the name cannot be found
+lookup = { name, env |
+    env[name]
+}
 
 # Given an expression and an environment containing Bindings,
 # return a Value produced by interpreting the given expression
@@ -198,17 +204,15 @@ interp = { expr, env |
                                     returnValue.type = "NumV"
                                     returnValue.value = expr.value
                                     returnValue }
-         { expr.type == "IdC"  } { lookup(expr.value, env) }
-         { expr.type == "IfC"  } { expr1Interp = interp(expr.expr1)
-                                   when { expr1Interp.type == "BoolV" } { true? expr1BoolV.value interp(expr.expr2) interp(expr.expr3) }
-                                        { true } { null }
-                                 }     
-}
-
-# Given a name, returns it's corresponding value from the environment.
-# Returns null if the name cannot be found
-lookup = { name, env |
-    env[name]
+        { expr.type == "StrC" } {   returnValue = new
+                                    returnValue.type = "StrV"
+                                    returnValue.value = expr.value
+                                    returnValue }
+        { expr.type == "IdC"  } { lookup(expr.value, env) }
+        { expr.type == "IfC"  } { expr1Interp = interp(expr.expr1, env)
+                                    when { expr1Interp.type == "BoolV" } { true? expr1Interp.value, interp(expr.expr2, env), interp(expr.expr3, env) }
+                                    { true } { null }
+                                }              
 }
 
 # Test Cases for Interp
@@ -226,8 +230,50 @@ actual = interp(testExpr, globalEnv)
 assert_equal(expected.type, actual.type)
 assert_equal(expected.value, actual.value)
 
+# StrC Test Case
+testExpr.type = "StrC"
+testExpr.value = "hello"
+
+expected.type = "StrV"
+expected.value = "hello"
+actual = interp(testExpr, globalEnv)
+
+assert_equal(expected.type, actual.type)
+assert_equal(expected.value, actual.value)
+
+# IfC Test Case
+testExpr.type = "IfC"
+testExpr.expr1 = new
+testExpr.expr1.type = "IdC"
+testExpr.expr1.value = "true"
+testExpr.expr2 = new
+testExpr.expr2.type = "NumC"
+testExpr.expr2.value = 100
+testExpr.expr3 = new
+testExpr.expr3.type = "StrC"
+testExpr.expr3.value = "false condition"
+
+expected.type = "NumV"
+expected.value = 100
+actual = interp(testExpr, globalEnv)
+
+assert_equal(expected.type, actual.type)
+assert_equal(expected.value, actual.value)
+
+testExpr.expr1.value = "false"
+
+expected.type = "StrV"
+expected.value = "false condition"
+actual = interp(testExpr, globalEnv)
+
+assert_equal(expected.type, actual.type)
+assert_equal(expected.value, actual.value)
+
+
 # Test Cases for lookup
 
 assert_equal(lookup("+", globalEnv), plusPrimop)
+assert_equal(lookup("true", globalEnv), trueBool)
+assert_equal(lookup("false", globalEnv), falseBool)
 assert_null(lookup("$", globalEnv))
 
