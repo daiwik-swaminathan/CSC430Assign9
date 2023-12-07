@@ -190,6 +190,54 @@ globalEnv["error"] = errorPrimop
 globalEnv["true"] = trueBool
 globalEnv["false"] = falseBool
 
+
+# Helper functions to help evaluate the primitive functions
+# args is a Brat array of Values
+call-primitive = { name, args |
+      when {name == "+"} { when { args.length == 2 && args[0].type == "NumV" && args[1].type == "NumV" } { returnValue = new
+                                                                                                           returnValue.type = "NumV"
+                                                                                                           returnValue.value = args[0].value + args[1].value
+                                                                                                           returnValue }
+                                { true } { null } }
+           {name == "-"} { when { args.length == 2 && args[0].type == "NumV" && args[1].type == "NumV" } { returnValue = new
+                                                                                                           returnValue.type = "NumV"
+                                                                                                           returnValue.value = args[0].value - args[1].value
+                                                                                                           returnValue }
+                                { true } { null } }
+           {name == "*"} { when { args.length == 2 && args[0].type == "NumV" && args[1].type == "NumV" } { returnValue = new
+                                                                                                           returnValue.type = "NumV"
+                                                                                                           returnValue.value = args[0].value * args[1].value
+                                                                                                           returnValue }
+                                { true } { null } }
+           {name == "/"} { when { args.length == 2 && args[0].type == "NumV" && args[1].type == "NumV" } { when { args[1].value != 0 } { returnValue = new
+                                                                                                                                         returnValue.type = "NumV"
+                                                                                                                                         returnValue.value = args[0].value * args[1].value
+                                                                                                                                         returnValue }
+                                                                                                                { true } { null } }
+                                { true } { null } }
+           {name == "<="} { when { args.length == 2 && args[0].type == "NumV" && args[1].type == "NumV" } { returnValue = new
+                                                                                                            returnValue.type = "BoolV"
+                                                                                                            returnValue.value = args[0].value <= args[1].value
+                                                                                                            returnValue }
+                                 { true } { null } }
+           {name == "equal?"} { when { args.length == 2 && args[0].type == "NumV" && args[1].type == "NumV" } { returnValue = new
+                                                                                                                returnValue.type = "BoolV"
+                                                                                                                returnValue.value = args[0].value == args[1].value
+                                                                                                                returnValue }
+                                     { true } { null } }
+           {name == "error"} { when { args.length == 1 } { throw "PAIG: user-error #{args[0].value}" }
+                                    { true } { null } }
+           {name == "true"} { returnValue = new
+                                            returnValue.type = "BoolV"
+                                            returnValue.value = true
+                                            returnValue }
+           {name == "false"} { returnValue = new
+                                            returnValue.type = "BoolV"
+                                            returnValue.value = false
+                                            returnValue }
+}
+
+
 # Given a name, returns it's corresponding value from the environment.
 # Returns null if the name cannot be found
 lookup = { name, env |
@@ -276,4 +324,5 @@ assert_equal(lookup("+", globalEnv), plusPrimop)
 assert_equal(lookup("true", globalEnv), trueBool)
 assert_equal(lookup("false", globalEnv), falseBool)
 assert_null(lookup("$", globalEnv))
-
+# assert_fail(lookup("$", globalEnv))
+# exception? lookup("$", globalEnv) p("hello") p("bye")
