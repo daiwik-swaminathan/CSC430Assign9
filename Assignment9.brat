@@ -252,16 +252,66 @@ interp = { expr, env |
                                     returnValue.type = "NumV"
                                     returnValue.value = expr.value
                                     returnValue }
+
         { expr.type == "StrC" } {   returnValue = new
                                     returnValue.type = "StrV"
                                     returnValue.value = expr.value
                                     returnValue }
+
         { expr.type == "IdC"  } { lookup(expr.value, env) }
+
         { expr.type == "IfC"  } { expr1Interp = interp(expr.expr1, env)
                                     when { expr1Interp.type == "BoolV" } { true? expr1Interp.value, interp(expr.expr2, env), interp(expr.expr3, env) }
                                     { true } { null }
-                                }              
-}
+                                }
+
+        { expr.type == "BlamC"  } { returnValue = new
+                                    returnValue.type = "CloV"
+                                    returnValue.args = expr.args
+                                    returnValue.body = expr.body
+                                    returnValue.env = env
+                                    returnValue }
+                                    
+        { expr.type == "AppC"  }
+                                { fun-something = interp(expr.fun,env) # interpret the function associated with the AppC
+                                  # custom function application case
+                                  when {fun-something.type == "CloV}
+                                        # check that number of formal parameters and arguments are equal
+                                        when {expr.fun-args.length == fun-something.clo-args.length}
+                                            {new-bindings = hash.new
+                                            # store the new bindings for the closure
+                                            i = 1
+                                            while {
+                                                new-bindings[fun-something.clo-args[i]] = interp(expr.fun-args[i],env) 
+                                                i = i + 1
+                                                i <= expr.fun-args.length
+                                            }
+
+                                            # extend the environment
+                                            extended-env = combineEnv(env,new-bindings)
+                                            # evaluate the function body with the extended environment
+                                            interp(fun-something.clo-body,extended-env)}
+
+                                            # return null if the number of formal parameters and arguments are unequal
+                                            {expr.fun-args.length != fun-something.clo-args.length} {null}
+
+                                        # primitive operator case
+                                       {fun-something.type == "PrimopV}
+                                            prim-args = []
+                                            i = 1
+                                            while {
+                                                prim-args << interp(expr.fun-args[i],env) 
+                                                i = i + 1
+                                                i <= expr.fun-args
+                                            }
+                                            call-primitive-helper(expr.name,prim-args)
+                                }
+} # end of function
+
+# Given two environments, return a single combined environment
+combineEnv = { env1, env2 |
+    env1 + env2
+}              
 
 # Test Cases for Interp
 
