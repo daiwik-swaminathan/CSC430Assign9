@@ -267,11 +267,11 @@ interp = { expr, env |
 
         { expr.type == "BlamC"  } { returnValue = new
                                     returnValue.type = "CloV"
-                                    returnValue.args = expr.args
-                                    returnValue.body = expr.body
+                                    returnValue.clo-args = expr.args
+                                    returnValue.clo-body = expr.body
                                     returnValue.env = env
                                     returnValue }
-                                    
+
         { expr.type == "AppC"  }
                                 { fun-something = interp(expr.fun,env) # interpret the function associated with the AppC
                                   # custom function application case
@@ -366,6 +366,41 @@ actual = interp(testExpr, globalEnv)
 
 assert_equal(expected.type, actual.type)
 assert_equal(expected.value, actual.value)
+
+# BlamC test case
+blamExpr.type = "BlamC"
+blamExpr.args = [x,y]
+
+appExpr.type = "AppC"
+appExpr.fun = new
+appExpr.fun.type = "IdC"
+appExpr.fun.value = "+"
+appExpr.args = [x,y]
+
+blamExpr.body = appExpr
+
+expected.type="CloV"
+expected.clo-args = [x,y]
+expected.clo-body = appExpr
+actual = interp(blamExpr,globalEnv)
+assert_equal(actual.type,expected.type)
+assert_equal(actual.value,expected.value)
+
+assert_equal(expected.type, actual.type)
+assert_equal(expected.clo-args, actual.clo-args)
+assert_equal(expected.clo-body, actual.clo-body)
+
+# AppC test case
+appExpr.type = "AppC"
+appExpr.fun = new
+appExpr.fun.type = "IdC"
+appExpr.fun.value = "+"
+appExpr.args = [1,2]
+actual = interp(appExpr,globalEnv)
+expected.type="NumV"
+expected.value=3
+assert_equal(actual.type,expected.type)
+assert_equal(actual.value,expected.value)
 
 
 # Test Cases for lookup
